@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra 
-LDFLAGS =
+LDFLAGS = -ljpeg
 
 SRCDIR = .
 BUILDDIR = build

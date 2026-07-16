@@ -1,21 +1,26 @@
 #include <stdio.h>
-#include <jpeglib.h>
-#include <setjmp.h>
 #include <stdlib.h>
+#include <jpeglib.h>
+#include <time.h>
 
-extern JSAMPLE* image_buffer;
-extern int image_height;
-extern int image_width;
-
-GLOBAL(void)
-write_JPEG_file (char* filename, int quality)
+int main()
 {
+  int width = 640;
+  int height = 480;
+  unsigned char* buffer = malloc(width * height * 3);
+  char* filename = "test.jpg";
+
+  srand(time(NULL));
+
+  for (int i = 0; i < width * height * 3; ++i)
+  {
+    buffer[i] = rand() % 256;
+  }
+
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
 
-  FILE* outfile;
-  JSAMPROW row_pointer[1];
-  int row_stride;
+  FILE* outfile = fopen(filename, "wb");
 
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_compress(&cinfo);
@@ -25,29 +30,26 @@ write_JPEG_file (char* filename, int quality)
     exit(1);
   }
   jpeg_stdio_dest(&cinfo, outfile);
-  
-  cinfo.image_width = image_width;
-  cinfo.image_height = image_height;
+
+  cinfo.image_width = width;
+  cinfo.image_height = height;
   cinfo.input_components = 3;
-  cinfo.in_color_space = JCS_EXT_RGB;
+  cinfo.in_color_space = JCS_RGB;
 
   jpeg_set_defaults(&cinfo);
-  jpeg_set_quality(&cinfo, quality, TRUE);
   jpeg_start_compress(&cinfo, TRUE);
-  row_stride = image_width * 3;
+
+  JSAMPROW row_pointer;
+  int row_stride = width * 3;
   while (cinfo.next_scanline < cinfo.image_height) {
-    row_pointer[0] = &image_buffer[cinfo.next_scanline*row_stride];
-    (void)jpeg_write_scanlines(&cinfo, row_pointer, 1);
+    row_pointer = (JSAMPROW)&buffer[cinfo.next_scanline * row_stride];
+    jpeg_write_scanlines(&cinfo, &row_pointer, 1);
   }
+
   jpeg_finish_compress(&cinfo);
   fclose(outfile);
   jpeg_destroy_compress(&cinfo);
+  free(buffer);
 
-}
-
-int main(int argc, char* argv[])
-{
-  write_JPEG_file("Test", 10);
   return 0;
 }
-

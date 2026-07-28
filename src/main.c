@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <jpeglib.h>
+#include <png.h>
 #include <time.h>
 
 int main()

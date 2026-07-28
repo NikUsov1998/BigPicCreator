@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <png.h>
+#include <time.h>
 
 void write_png_file(const char *filename, int width, int height) {
     FILE *fp = fopen(filename, "wb");
@@ -43,15 +44,15 @@ void write_png_file(const char *filename, int width, int height) {
     png_write_info(png, info);
 
     png_bytep *row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
-    for (int y = 0; y < height; y++) {
+    for (int y = 0; y < height; ++y) {
         row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png, info));
         
         // Fill row pixels (Example: Solid Red with full opacity)
-        for (int x = 0; x < width; x++) {
+        for (int x = 0; x < width; ++x) {
             png_bytep px = &(row_pointers[y][x * 4]);
-            px[0] = 255; // R
-            px[1] = 0;   // G
-            px[2] = 0;   // B
+            px[0] = rand() % 256; // R
+            px[1] = rand() % 256;   // G
+            px[2] = rand() % 256;   // B
             px[3] = 255; // A
         }
     }
@@ -69,6 +70,7 @@ void write_png_file(const char *filename, int width, int height) {
 }
 
 int main() {
+    srand(time(NULL));
     write_png_file("output.png", 300, 200);
     return 0;
 }

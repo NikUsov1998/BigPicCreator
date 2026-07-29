@@ -1,3 +1,5 @@
+#define GNU_SOURCE
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <jpeglib.h>
@@ -118,10 +120,26 @@ void write_png_file(const char *filename, int width, int height) {
     fclose(fp);
 }
 
-int main()
+void print_help()
+{
+  printf("Usage: \n");
+  printf("\t-h | --help\t print help\n");
+  printf("\t-f | --filename\t set name for output file\n");
+  printf("\t-s | --size\t Set size for output file; Format - 1Kb 1Gb 1Tb\n");
+  printf("\t-e | --extention\tSet file extention; jpeg or png \n");
+  
+}
+
+int main(int argc, char* argv[])
 {
   srand(time(NULL));
+  int opt;
+  int verbose = 0;
+  
   write_png_file("output.png", 300, 200);
   write_jpeg_file();
+  int height = 0;
+  int width = 0;
+  int size = 0;
   return 0;
 }

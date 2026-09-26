@@ -122,19 +122,68 @@ void write_png_file(const char *filename, int width, int height) {
 
 void print_help()
 {
-  printf("Usage: \n");
-  printf("\t-h | --help\t print help\n");
-  printf("\t-f | --filename\t set name for output file\n");
-  printf("\t-s | --size\t Set size for output file; Format - 1Kb 1Gb 1Tb\n");
-  printf("\t-e | --extention\tSet file extention; jpeg or png \n");
+  printf("Usage:\n");
+  printf("  -h | --help\t\tPrint help\n");
+  printf("  -s | --size\t\tSet size for output file; Format - 1Kb 1Gb 1Tb\n");
+  printf("  -v | --visual\t\tPrint info to terminal\n");
+  printf("  -f | --filename\tSet name for output file\n");
+  printf("  -t | --type\t\tSet file extention; jpeg or png \n");
   
 }
 
 int main(int argc, char* argv[])
 {
   srand(time(NULL));
-  int opt;
-  int verbose = 0;
+	const char* short_options = "hsv::ft:";
+
+	const struct option long_options[] = {
+    { "help", no_argument, NULL, 'h' },
+    { "size", optional_argument, NULL, 's' },
+    { "visual", optional_argument, NULL, 'v'},
+    { "filename", required_argument, NULL, 'f' },
+    { "type", required_argument, NULL, 't'},
+    { NULL, 0, NULL, 0 }
+	};
+
+	int rez;
+	int option_index = -1;
+	while ((rez=getopt_long(argc,argv,short_options,
+		long_options,&option_index))!=-1){
+
+		switch(rez){
+			case 'h': {
+        print_help();
+				break;
+			};
+
+			case 's': {
+				if (optarg!=NULL)
+					printf("found size with value %s\n",optarg);
+				else
+					printf("found size without value\n");
+				break;
+			};
+
+      case 'v': {
+        break;
+      };
+	
+			case 'f': {
+				break;
+			};
+
+      case 't': {
+        break;
+      };
+
+			case '?': default: {
+				printf("found unknown option\n");
+        print_help();
+				break;
+			};
+		};
+    option_index = -1;
+	};
   
   write_png_file("output.png", 300, 200);
   write_jpeg_file();

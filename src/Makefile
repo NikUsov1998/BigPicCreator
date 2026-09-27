@@ -13,21 +13,26 @@ OBJECTS = $(SOURCES:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
 
 DIRS = $(BUILDDIR) $(BINDIR) $(LIBDIR)
 
+POST_BUILD = 
+
 .PHONY: build debug clean
 
 build: dirs $(TARGET)
 build: CFLAGS += -O2
+build: POST_BUILD += strip -s $(TARGET)
 build: $(TARGET)
 
 debug: dirs $(TARGET)
-debug: CFLAGS += -O0 -g -DDEBUG
+debug: CFLAGS += -O0 -g3 -ggdb -DDEBUG
 debug: $(TARGET)
 
 dirs:
 	@echo "mkdir -p $(DIRS)"
 	mkdir -p $(DIRS)
+
 $(TARGET): $(OBJECTS) | $(BINDIR)
 	$(CC) $^ -o $@ $(LDFLAGS)
+	$(POST_BUILD)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(BUILDDIR)
 	$(CC) $(CFLAGS) -c $< -o $@

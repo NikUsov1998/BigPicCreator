@@ -2,17 +2,14 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <jpeglib.h>
 #include <png.h>
 #include <time.h>
 
-void write_jpeg_file()
+void write_jpeg_file(const char *filename, int width, int height)
 {
-  int width = 640;
-  int height = 480;
   unsigned char* buffer = malloc(width * height * 3);
-  char* filename = "test.jpg";
-
 
   for (int i = 0; i < width * height * 3; ++i)
   {
@@ -140,13 +137,14 @@ int main(int argc, char* argv[])
     { "help", no_argument, NULL, 'h' },
     { "size", optional_argument, NULL, 's' },
     { "visual", optional_argument, NULL, 'v'},
-    { "filename", required_argument, NULL, 'f' },
+    { "file", required_argument, NULL, 'f' },
     { "type", required_argument, NULL, 't'},
     { NULL, 0, NULL, 0 }
 	};
 
 	int rez;
 	int option_index = -1;
+  char filename[256];
 	while ((rez=getopt_long(argc,argv,short_options,
 		long_options,&option_index))!=-1){
 
@@ -161,6 +159,8 @@ int main(int argc, char* argv[])
 					printf("found size with value %s\n",optarg);
 				else
 					printf("found size without value\n");
+          print_help();
+          exit(EXIT_FAILURE);
 				break;
 			};
 
@@ -169,10 +169,40 @@ int main(int argc, char* argv[])
       };
 	
 			case 'f': {
+				if (optarg!=NULL)
+        {
+          printf("filename = %s\n", optarg);
+          strcpy(optarg, filename);
+          printf("%s\n", filename);
+        }
+        else 
+        {
+					printf("Found no filename!\n");
+          print_help();
+          exit(EXIT_FAILURE);
+        }
 				break;
 			};
 
       case 't': {
+				if (optarg!=NULL)
+        {
+          printf("%s\n", optarg);
+          if (!strcmp(optarg, "jpg"))
+          {
+            printf("Make jpeg\n");
+            write_jpeg_file("filename.jpg", 640, 480);
+          }
+          else if (!strcmp(optarg, "png")) {
+            printf("Make png\n");
+            write_png_file("filename.jpg", 640, 480);
+          }
+          else {
+            printf("Unknown format!\n");
+            print_help();
+            break;
+          }
+        }
         break;
       };
 
@@ -185,10 +215,5 @@ int main(int argc, char* argv[])
     option_index = -1;
 	};
   
-  write_png_file("output.png", 300, 200);
-  write_jpeg_file();
-  int height = 0;
-  int width = 0;
-  int size = 0;
   return 0;
 }

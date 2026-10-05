@@ -26,7 +26,7 @@ void write_jpeg_file(const char *filename, int width, int height)
 
   if ((outfile = fopen(filename, "wb")) == NULL) {
     fprintf(stderr, "Can't open %s\n", filename);
-    exit(1);
+    exit(EXIT_FAILURE);
   }
   jpeg_stdio_dest(&cinfo, outfile);
 
@@ -144,7 +144,10 @@ int main(int argc, char* argv[])
 
 	int rez;
 	int option_index = -1;
-  char filename[256];
+  char* filename;
+  char* filetype;
+  char* filesize;
+
 	while ((rez=getopt_long(argc,argv,short_options,
 		long_options,&option_index))!=-1){
 
@@ -155,12 +158,17 @@ int main(int argc, char* argv[])
 			};
 
 			case 's': {
-				if (optarg!=NULL)
-					printf("found size with value %s\n",optarg);
+				if (optarg!=NULL) { 
+					printf("Found size with value %s\n",optarg);
+          filesize = optarg;
+          printf("%s\n", filesize);
+        }
 				else
-					printf("found size without value\n");
+        {
+					printf("Found size without value\n");
           print_help();
           exit(EXIT_FAILURE);
+        }
 				break;
 			};
 
@@ -171,8 +179,8 @@ int main(int argc, char* argv[])
 			case 'f': {
 				if (optarg!=NULL)
         {
-          printf("filename = %s\n", optarg);
-          strcpy(optarg, filename);
+          //strcpy(optarg, filename);
+          filename = optarg;
           printf("%s\n", filename);
         }
         else 
@@ -187,33 +195,47 @@ int main(int argc, char* argv[])
       case 't': {
 				if (optarg!=NULL)
         {
-          printf("%s\n", optarg);
-          if (!strcmp(optarg, "jpg"))
-          {
-            printf("Make jpeg\n");
-            write_jpeg_file("filename.jpg", 640, 480);
-          }
-          else if (!strcmp(optarg, "png")) {
-            printf("Make png\n");
-            write_png_file("filename.jpg", 640, 480);
-          }
-          else {
-            printf("Unknown format!\n");
-            print_help();
-            break;
-          }
+          filetype = optarg;
+          printf("%s\n", filetype);
+        }
+        else 
+        {
+					printf("Found no filetype!\n");
+          print_help();
+          exit(EXIT_FAILURE);
         }
         break;
       };
 
 			case '?': default: {
-				printf("found unknown option\n");
+				printf("Found unknown option\n");
         print_help();
 				break;
 			};
 		};
     option_index = -1;
 	};
-  
+
+  int required_size = strlen(filename) + strlen(filetype) + 2; // +2 for . and \0
+  if (required_size == NULL) {
+    exit(EXIT_FAILURE);
+  }
+  char* full_filename = malloc(required_size);
+  snprintf(full_filename, required_size, "%s.%s", filename, filetype);
+
+  if (!strcmp(filetype, "jpg"))
+  {
+    printf("Make jpeg\n");
+    write_jpeg_file(full_filename, 16384, 16384);
+  }
+  else if (!strcmp(filetype, "png")) {
+    printf("Make png\n");
+    write_png_file(full_filename, 4096, 4096);
+  }
+  else {
+    printf("Unknown format!\n");
+    print_help();
+  }
+
   return 0;
 }

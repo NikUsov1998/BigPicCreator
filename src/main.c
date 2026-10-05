@@ -83,8 +83,8 @@ void write_png_file(const char *filename, int width, int height) {
         png,
         info,
         width, height,
-        8,                                 // bit depth (8 bits per channel)
-        PNG_COLOR_TYPE_RGBA,               // color type (Red, Green, Blue, Alpha)
+        8,                                 		// bit depth (8 bits per channel)
+        PNG_COLOR_TYPE_RGBA,           // color type (Red, Green, Blue, Alpha)
         PNG_INTERLACE_ADAM7,
         PNG_COMPRESSION_TYPE_DEFAULT,
         PNG_FILTER_TYPE_DEFAULT
@@ -94,8 +94,6 @@ void write_png_file(const char *filename, int width, int height) {
     png_bytep *row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
     for (int y = 0; y < height; ++y) {
         row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png, info));
-        
-        // Fill row pixels (Example: Solid Red with full opacity)
         for (int x = 0; x < width; ++x) {
             png_bytep px = &(row_pointers[y][x * 4]);
             px[0] = rand() % 256; // R
@@ -104,7 +102,6 @@ void write_png_file(const char *filename, int width, int height) {
             px[3] = 255; // A
         }
     }
-
     png_write_image(png, row_pointers);
     png_write_end(png, NULL);
 
@@ -134,87 +131,81 @@ int main(int argc, char* argv[])
 	const char* short_options = "hsv::ft:";
 
 	const struct option long_options[] = {
-    { "help", no_argument, NULL, 'h' },
-    { "size", optional_argument, NULL, 's' },
-    { "visual", optional_argument, NULL, 'v'},
-    { "file", required_argument, NULL, 'f' },
-    { "type", required_argument, NULL, 't'},
-    { NULL, 0, NULL, 0 }
+	    { "help", no_argument, NULL, 'h' },
+	    { "size", optional_argument, NULL, 's' },
+	    { "visual", optional_argument, NULL, 'v'},
+	    { "file", required_argument, NULL, 'f' },
+	    { "type", required_argument, NULL, 't'},
+	    { NULL, 0, NULL, 0 }
 	};
 
 	int rez;
 	int option_index = -1;
-  char* filename;
-  char* filetype;
-  char* filesize;
+  	char* filename;
+  	char* filetype;
+  	char* filesize;
 
 	while ((rez=getopt_long(argc,argv,short_options,
 		long_options,&option_index))!=-1){
 
 		switch(rez){
 			case 'h': {
-        print_help();
+        			print_help();
 				break;
 			};
-
 			case 's': {
 				if (optarg!=NULL) { 
 					printf("Found size with value %s\n",optarg);
-          filesize = optarg;
-          printf("%s\n", filesize);
-        }
-				else
-        {
+					filesize = optarg;
+					printf("%s\n", filesize);
+				}
+				else {
 					printf("Found size without value\n");
-          print_help();
-          exit(EXIT_FAILURE);
-        }
+			  		print_help();
+			  		exit(EXIT_FAILURE);
+				}
 				break;
 			};
 
-      case 'v': {
-        break;
-      };
-	
+		      	case 'v': {
+				break;
+		      	};
+			
 			case 'f': {
-				if (optarg!=NULL)
-        {
-          //strcpy(optarg, filename);
-          filename = optarg;
-          printf("%s\n", filename);
-        }
-        else 
-        {
+				if (optarg!=NULL){
+					  //strcpy(optarg, filename);
+					  filename = optarg;
+					  printf("%s\n", filename);
+				}
+				else{
 					printf("Found no filename!\n");
-          print_help();
-          exit(EXIT_FAILURE);
-        }
+  					print_help();
+				 	exit(EXIT_FAILURE);
+				}
 				break;
 			};
 
-      case 't': {
-				if (optarg!=NULL)
-        {
-          filetype = optarg;
-          printf("%s\n", filetype);
-        }
-        else 
-        {
+		      case 't': {
+				if (optarg!=NULL) {
+					  filetype = optarg;
+					  printf("%s\n", filetype);
+				}
+				else {
 					printf("Found no filetype!\n");
-          print_help();
-          exit(EXIT_FAILURE);
-        }
-        break;
-      };
+			  		print_help();
+			  		exit(EXIT_FAILURE);
+				}
+				break;
+			};
 
 			case '?': default: {
 				printf("Found unknown option\n");
-        print_help();
+				print_help();
 				break;
 			};
-		};
-    option_index = -1;
 	};
+	option_index = -1;
+};
 
   int required_size = strlen(filename) + strlen(filetype) + 2; // +2 for . and \0
   if (required_size == NULL) {

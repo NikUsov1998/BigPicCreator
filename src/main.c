@@ -2,10 +2,12 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <jpeglib.h>
 #include <png.h>
 #include <time.h>
+#include "include/xstrtol.h"
 
 void write_jpeg_file(const char *filename, int width, int height)
 {
@@ -141,9 +143,9 @@ int main(int argc, char* argv[])
 
 	int rez;
 	int option_index = -1;
-  	char* filename;
-  	char* filetype;
-  	char* filesize;
+  uintmax_t filesize = 0;
+  char* filename;
+  char* filetype;
 
 	while ((rez=getopt_long(argc,argv,short_options,
 		long_options,&option_index))!=-1){
@@ -155,9 +157,13 @@ int main(int argc, char* argv[])
 			};
 			case 's': {
 				if (optarg!=NULL) { 
-					printf("Found size with value %s\n",optarg);
-					filesize = optarg;
-					printf("%s\n", filesize);
+					printf("Found size with value %s\n", optarg);
+          enum strtol_error err = xstrtoumax(optarg, NULL, 0, &filesize, "bkKmMgGtT");
+          if (err != LONGINT_OK) {
+            printf( "Wrong size suffix %s\n", optarg);
+            exit(EXIT_FAILURE);
+          } 
+					printf("%i\n", (int)filesize);
 				}
 				else {
 					printf("Found size without value\n");
@@ -217,7 +223,7 @@ int main(int argc, char* argv[])
   if (!strcmp(filetype, "jpg"))
   {
     printf("Make jpeg\n");
-    write_jpeg_file(full_filename, 16384, 16384);
+    write_jpeg_file(full_filename, 4096, 4096);
   }
   else if (!strcmp(filetype, "png")) {
     printf("Make png\n");

@@ -1,5 +1,6 @@
 #define GNU_SOURCE
 #include <getopt.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -7,7 +8,34 @@
 #include <jpeglib.h>
 #include <png.h>
 #include <time.h>
+
 #include "include/xstrtol.h"
+
+#define MAX_QUALITY 100
+#define SIDE_MIN 1u
+#define SIDE_MAX 65535u
+#define JPEG_BYTES_PER_PIXEL 4.1
+#define PNG_BYTES_PER_PIXEL 3.4
+
+static uint32_t jpeg_side_estimate(uintmax_t target_bytes)
+{
+  double base_count = sqrt((double)target_bytes / JPEG_BYTES_PER_PIXEL);
+  uint32_t side = (uint32_t)(base_count + 0.5);
+  if (side < SIDE_MIN) side = SIDE_MIN;
+  if (side > SIDE_MAX) side = SIDE_MAX;
+  printf("%i\n", side);
+  return side;
+}
+
+static uint32_t png_side_estimate(uintmax_t target_bytes)
+{
+  double base_count = sqrt((double)target_bytes / PNG_BYTES_PER_PIXEL);
+  uint32_t side = (uint32_t)(base_count + 0.5);
+  if (side < SIDE_MIN) side = SIDE_MIN;
+  if (side > SIDE_MAX) side = SIDE_MAX;
+  printf("%i\n", side);
+  return side;
+}
 
 void write_jpeg_file(const char *filename, int width, int height)
 {
@@ -38,6 +66,11 @@ void write_jpeg_file(const char *filename, int width, int height)
   cinfo.in_color_space = JCS_RGB;
 
   jpeg_set_defaults(&cinfo);
+  jpeg_set_quality(&cinfo, MAX_QUALITY, TRUE);
+
+  cinfo.comp_info[0].h_samp_factor = 1;
+  cinfo.comp_info[0].v_samp_factor = 1;
+
   jpeg_start_compress(&cinfo, TRUE);
 
   JSAMPROW row_pointer;
@@ -222,13 +255,22 @@ int main(int argc, char* argv[])
 
   if (!strcmp(filetype, "jpg"))
   {
+
+    uint32_t jpeg_side = jpeg_side_estimate(filesize);
+    printf("%i\n", jpeg_side);
+
     printf("Make jpeg\n");
-    write_jpeg_file(full_filename, 4096, 4096);
+    write_jpeg_file(full_filename, jpeg_side, jpeg_side);
   }
+
   else if (!strcmp(filetype, "png")) {
+    uint32_t png_side = png_side_estimate(filesize);
+    printf("%i\n", png_side);
+
     printf("Make png\n");
-    write_png_file(full_filename, 4096, 4096);
+    write_png_file(full_filename, png_side, png_side);
   }
+
   else {
     printf("Unknown format!\n");
     print_help();

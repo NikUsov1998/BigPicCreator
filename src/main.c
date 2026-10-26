@@ -153,7 +153,7 @@ void print_help()
 {
   printf("Usage:\n");
   printf("  -h | --help\t\tPrint help\n");
-  printf("  -s | --size\t\tSet size for output file; Format - 1Kb 1Gb 1Tb\n");
+  printf("  -s | --size\t\tSet size for output file; Format - 1b 1k 1m or 1B 1K etc.\n");
   printf("  -v | --visual\t\tPrint info to terminal\n");
   printf("  -f | --filename\tSet name for output file\n");
   printf("  -t | --type\t\tSet file extention; jpeg or png \n");

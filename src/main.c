@@ -163,7 +163,7 @@ void print_help()
 int main(int argc, char* argv[])
 {
   srand(time(NULL));
-	const char* short_options = "hsv::ft:";
+	const char* short_options = "hs:v::f:t:";
 
 	const struct option long_options[] = {
 	    { "help", no_argument, NULL, 'h' },
@@ -177,17 +177,23 @@ int main(int argc, char* argv[])
 	int rez;
 	int option_index = -1;
   uintmax_t filesize = 0;
-  char* filename;
-  char* filetype;
+  char* filename = NULL;
+  char* filetype = NULL;
 
 	while ((rez=getopt_long(argc,argv,short_options,
 		long_options,&option_index))!=-1){
 
+    char* arg = optarg;
+    if (arg != NULL && arg[0] == '=') {
+          arg++;
+    }
+
 		switch(rez){
 			case 'h': {
-        			print_help();
+        print_help();
 				break;
 			};
+
 			case 's': {
 				if (optarg!=NULL) { 
 					printf("Found size with value %s\n", optarg);
@@ -196,43 +202,42 @@ int main(int argc, char* argv[])
             printf( "Wrong size suffix %s\n", optarg);
             exit(EXIT_FAILURE);
           } 
-					printf("%i\n", (int)filesize);
+					printf("Size: %" PRIuMAX "\n", filesize);
 				}
 				else {
 					printf("Found size without value\n");
-			  		print_help();
-			  		exit(EXIT_FAILURE);
+          print_help();
+          exit(EXIT_FAILURE);
 				}
 				break;
 			};
 
-		      	case 'v': {
+      case 'v': {
 				break;
-		      	};
+      };
 			
 			case 'f': {
 				if (optarg!=NULL){
-					  //strcpy(optarg, filename);
-					  filename = optarg;
-					  printf("%s\n", filename);
+          filename = optarg;
+          printf("%s\n", filename);
 				}
 				else{
 					printf("Found no filename!\n");
-  					print_help();
+          print_help();
 				 	exit(EXIT_FAILURE);
 				}
 				break;
 			};
 
-		      case 't': {
+      case 't': {
 				if (optarg!=NULL) {
-					  filetype = optarg;
-					  printf("%s\n", filetype);
+          filetype = optarg;
+          printf("%s\n", filetype);
 				}
 				else {
 					printf("Found no filetype!\n");
-			  		print_help();
-			  		exit(EXIT_FAILURE);
+          print_help();
+          exit(EXIT_FAILURE);
 				}
 				break;
 			};
@@ -246,18 +251,21 @@ int main(int argc, char* argv[])
 	option_index = -1;
 };
 
-  int required_size = strlen(filename) + strlen(filetype) + 2; // +2 for . and \0
-  if (required_size == NULL) {
-    exit(EXIT_FAILURE);
-  }
+  size_t required_size = strlen(filename) + strlen(filetype) + 2; // +2 for . and \0
   char* full_filename = malloc(required_size);
+
+  if (full_filename == NULL) {
+    perror("malloc");
+    return EXIT_FAILURE;
+  }
+
   snprintf(full_filename, required_size, "%s.%s", filename, filetype);
 
   if (!strcmp(filetype, "jpg"))
   {
 
     uint32_t jpeg_side = jpeg_side_estimate(filesize);
-    printf("%i\n", jpeg_side);
+    printf("%u\n", jpeg_side);
 
     printf("Make jpeg\n");
     write_jpeg_file(full_filename, jpeg_side, jpeg_side);
@@ -265,7 +273,7 @@ int main(int argc, char* argv[])
 
   else if (!strcmp(filetype, "png")) {
     uint32_t png_side = png_side_estimate(filesize);
-    printf("%i\n", png_side);
+    printf("%u\n", png_side);
 
     printf("Make png\n");
     write_png_file(full_filename, png_side, png_side);
@@ -275,6 +283,6 @@ int main(int argc, char* argv[])
     printf("Unknown format!\n");
     print_help();
   }
-
+  free(full_filename);
   return 0;
 }

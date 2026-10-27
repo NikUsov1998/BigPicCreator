@@ -18,7 +18,7 @@ POST_BUILD =
 .PHONY: build debug clean
 
 build: dirs $(TARGET)
-build: CFLAGS += -O2
+build: CFLAGS += -Ofast -flto
 build: POST_BUILD += strip -s $(TARGET)
 build: $(TARGET)
 

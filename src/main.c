@@ -8,6 +8,13 @@
 #include <jpeglib.h>
 #include <png.h>
 #include <time.h>
+#include <limits.h>
+#include <setjmp.h>
+#include <stddef.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdbool.h>
 
 #include "include/xstrtol.h"
 
@@ -27,14 +34,161 @@ static uint32_t jpeg_side_estimate(uintmax_t target_bytes)
   return side;
 }
 
-static uint32_t png_side_estimate(uintmax_t target_bytes)
+struct jpeg_error_context {
+  struct jpeg_error_mgr pub;
+  jmp_buf jump_buffer;
+};
+
+static void jpeg_error_exit(j_common_ptr cinfo)
 {
-  double base_count = sqrt((double)target_bytes / PNG_BYTES_PER_PIXEL);
-  uint32_t side = (uint32_t)(base_count + 0.5);
-  if (side < SIDE_MIN) side = SIDE_MIN;
-  if (side > SIDE_MAX) side = SIDE_MAX;
-  printf("%i\n", side);
-  return side;
+  struct jpeg_error_context *err = (struct jpeg_error_context*)cinfo->err;
+  longjmp(err->jump_buffer, 1);
+}
+
+int write_jpeg_file_by_line(const char *filename, int width, int height)
+{
+  if (filename == NULL || 
+      filename[0] == '\0' ||
+      width <= 0 ||
+      height <= 0) {
+    fprintf(stderr, "[ERROR]:\t Invalid filename or image dimension\n");
+    return -1;
+  }
+
+  if ((size_t)width > SIZE_MAX / 3) {
+    fprintf(stderr, "[ERROR]:\t Image row is too big\n");
+    return -1;
+  }
+
+
+  size_t row_stride = (size_t)width * 3;
+
+  if ((uintmax_t)width > UINT_MAX ||
+      (uintmax_t)height > UINT_MAX) {
+    
+    fprintf(stderr, "[ERROR]:\t Image dimension exceed jpeg limits\n");
+    return -1;
+  }
+
+  size_t name_len = strlen(filename);
+  static const char suffix[] = ".tmp.XXXXXX";
+
+  if (name_len > SIZE_MAX - sizeof(suffix)) {
+    fprintf(stderr, "[ERROR]:\t Filename is too long\n");
+    return -1;
+  }
+
+  char* temp_name = malloc(name_len + sizeof(suffix));
+
+  if (temp_name == NULL) {
+    perror("malloc");
+    return -1;
+  }
+  
+  memcpy(temp_name, filename, name_len);
+  memcpy(temp_name + name_len, suffix, sizeof(suffix));
+
+  int fd = mkstemp(temp_name);
+  if (fd == -1) {
+    perror("mkstemp");
+    free(temp_name);
+    return -1;
+  }
+
+  FILE* outfile = fdopen(fd, "wb");
+
+  if (outfile == NULL) {
+    perror("fdopen");
+    close(fd);
+    unlink(temp_name);
+    free(temp_name);
+    return -1;
+  }
+
+  struct jpeg_compress_struct cinfo = {0};
+  struct jpeg_error_context jerr;
+
+  unsigned char* row = NULL;
+  int compressor_created = 0;
+  int success = 0;
+  
+
+  cinfo.err = jpeg_std_error(&jerr.pub);
+  jerr.pub.error_exit = jpeg_error_exit;
+
+  if (setjmp(jerr.jump_buffer)) {
+    fprintf(stderr, "[ERROR]:\t JPEG compression failed\n");
+    goto cleanup;
+  }
+
+  jpeg_create_compress(&cinfo);
+  compressor_created = 1;
+
+  jpeg_stdio_dest(&cinfo, outfile);
+
+  cinfo.image_width = (JDIMENSION)width;
+  cinfo.image_height = (JDIMENSION)height;
+  cinfo.input_components = 3;
+  cinfo.in_color_space = JCS_RGB;
+
+  jpeg_set_defaults(&cinfo);
+  jpeg_set_quality(&cinfo, MAX_QUALITY, TRUE);
+
+  cinfo.comp_info[0].h_samp_factor = 1;
+  cinfo.comp_info[0].v_samp_factor = 1;
+
+  row = malloc(row_stride);
+
+  if (row == NULL) {
+    perror("malloc row");
+    goto cleanup;
+  }
+
+  jpeg_start_compress(&cinfo, TRUE);
+
+  while (cinfo.next_scanline < cinfo.image_height) {
+    for (size_t i = 0; i < row_stride; ++i) {
+      row[i] = (unsigned char)(rand() % 256);
+    }
+    JSAMPROW row_pointer = row;
+    if (jpeg_write_scanlines(&cinfo, &row_pointer, 1) != 1) {
+      fprintf(stderr, "[ERROR]:\t Could not write jpeg scanline\n");
+      goto cleanup;
+    }
+
+  }
+  jpeg_finish_compress(&cinfo);
+
+  if (fclose(outfile) != 0) {
+    outfile = NULL;
+    perror("fclose");
+    goto cleanup;
+  }
+  outfile = NULL;
+  if (rename(temp_name, filename) !=0) {
+    perror("rename");
+    goto cleanup;
+  }
+  success = 1;
+
+cleanup:
+  free(row);
+  if (compressor_created) {
+    jpeg_destroy_compress(&cinfo);
+  }
+  
+  if (outfile != NULL) {
+    if (fclose(outfile) != 0) {
+      perror("fclose");
+      success = 0;
+    }
+  }
+
+  if (success != 0) {
+    unlink(temp_name);
+  }
+  free(temp_name);
+  return success ? 0 : -1;
 }
 
 void write_jpeg_file(const char *filename, int width, int height)
@@ -84,6 +238,16 @@ void write_jpeg_file(const char *filename, int width, int height)
   fclose(outfile);
   jpeg_destroy_compress(&cinfo);
   free(buffer);
+}
+
+static uint32_t png_side_estimate(uintmax_t target_bytes)
+{
+  double base_count = sqrt((double)target_bytes / PNG_BYTES_PER_PIXEL);
+  uint32_t side = (uint32_t)(base_count + 0.5);
+  if (side < SIDE_MIN) side = SIDE_MIN;
+  if (side > SIDE_MAX) side = SIDE_MAX;
+  printf("%i\n", side);
+  return side;
 }
 
 void write_png_file(const char *filename, int width, int height) {
@@ -180,6 +344,9 @@ int main(int argc, char* argv[])
   char* filename = NULL;
   char* filetype = NULL;
 
+  bool by_line = false;
+  printf("By line: %i\n", by_line);
+
 	while ((rez=getopt_long(argc,argv,short_options,
 		long_options,&option_index))!=-1){
 
@@ -202,6 +369,10 @@ int main(int argc, char* argv[])
             printf( "Wrong size suffix %s\n", optarg);
             exit(EXIT_FAILURE);
           } 
+          if (filesize >= 314572800) {
+            by_line = true; 
+            printf("By line: %i\n", by_line);
+          }
 					printf("Size: %" PRIuMAX "\n", filesize);
 				}
 				else {
@@ -268,7 +439,15 @@ int main(int argc, char* argv[])
     printf("%u\n", jpeg_side);
 
     printf("Make jpeg\n");
-    write_jpeg_file(full_filename, jpeg_side, jpeg_side);
+
+    if (!by_line) {
+      printf("By line: %i\n", by_line);
+      write_jpeg_file(full_filename, jpeg_side, jpeg_side);
+    }
+    else {
+      printf("By line: %i\n", by_line);
+      write_jpeg_file_by_line(full_filename, jpeg_side, jpeg_side);
+    }
   }
 
   else if (!strcmp(filetype, "png")) {
